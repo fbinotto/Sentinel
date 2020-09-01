@@ -8,10 +8,6 @@ param(
 Install-Module AzSentinel -Scope CurrentUser -Force
 Import-Module AzSentinel
 
-Write-Host $workspaceName
-Write-Host "$settingsFile"
-Get-ChildItem "$($env:SYSTEM_ARTIFACTSDIRECTORY)\_Sentinel_of_Sentinels"
-
 $rules = Get-AzSentinelAlertRule -WorkspaceName $workspaceName | Select-Object -ExpandProperty DisplayName
 Get-Item "$folderName\*.json" | ForEach-Object {
     
