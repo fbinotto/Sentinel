@@ -1,0 +1,40 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "// a threshold can be enabled, see commented line below for PrevSeenCount\r\n  let threshold = 2;\r\n  let uploadOp = 'FileUploaded';\r\n  // Extensions that are interesting. Add/Remove to this list as you see fit\r\n  let execExt = dynamic(['exe', 'inf', 'gzip', 'cmd', 'bat']);\r\n  let starttime = 8d;\r\n  let endtime = 1d;\r\n  OfficeActivity | where TimeGenerated >= ago(endtime)\r\n  // Limited to File Uploads due to potential noise, comment out the Operation statement below to include any operation type\r\n  // Additional, but potentially noisy operation types that include Uploads and Downloads can be included by adding the following - Operation contains \"upload\" or Operation contains \"download\"\r\n  | where Operation =~ uploadOp\r\n  | where SourceFileExtension has_any (execExt)\r\n  | project TimeGenerated, OfficeId, OfficeWorkload, RecordType, Operation, UserType, UserKey, UserId, ClientIP, UserAgent, Site_Url, SourceRelativeUrl, SourceFileName\r\n  | join kind= leftanti (\r\n  OfficeActivity | where TimeGenerated between (ago(starttime) .. ago(endtime))\r\n  | where Operation =~ uploadOp\r\n  | where SourceFileExtension has_any (execExt)\r\n  | summarize SourceRelativeUrl = make_set(SourceRelativeUrl), UserId = make_set(UserId) , PrevSeenCount = count() by SourceFileName\r\n  // To exclude previous matches when only above a specific count, change threshold above and uncomment the line below\r\n  //| where PrevSeenCount > threshold\r\n  | mvexpand SourceRelativeUrl, UserId\r\n  | extend SourceRelativeUrl = tostring(SourceRelativeUrl), UserId = tostring(UserId)\r\n  ) on SourceFileName, SourceRelativeUrl, UserId \r\n  | extend SiteUrlUserFolder = tolower(split(Site_Url, '/')[-2])\r\n  | extend UserIdUserFolderFormat = tolower(replace('@|\\\\.', '_',UserId))\r\n  // identify when UserId is not a match to the specific site url personal folder reference\r\n  | extend UserIdDiffThanUserFolder = iff(Site_Url has '/personal/' and SiteUrlUserFolder != UserIdUserFolderFormat, true , false ) \r\n  | summarize TimeGenerated = make_list(TimeGenerated), StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), \r\n  UserAgents = make_list(UserAgent), OfficeIds = make_list(OfficeId), SourceRelativeUrls = make_list(SourceRelativeUrl), FileNames = make_list(SourceFileName)\r\n  by OfficeWorkload, RecordType, Operation, UserType, UserKey, UserId, ClientIP, Site_Url, SiteUrlUserFolder, UserIdUserFolderFormat, UserIdDiffThanUserFolder",
+      "queryFrequency": "PT1H",
+      "queryPeriod": "PT1H",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": false,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Office Uploaded Executables",
+      "enabled": true,
+      "description": "",
+      "tactics": [
+        "Execution",
+        "PrivilegeEscalation"
+      ],
+      "alertRuleTemplateName": null,
+      "lastModifiedUtc": "2020-06-01T09:01:08.7830266Z",
+      "name": "614f16f9-e9e3-40b4-ae14-d94eed9cdd2c",
+      "etag": "\"000041cf-0000-1a00-0000-5ed4c3d40000\"",
+      "id": "/subscriptions/fb99f5a1-54fe-4dcf-8510-13689cc0f9ef/resourceGroups/sentinel/providers/Microsoft.OperationalInsights/workspaces/az-sentinel-001/providers/Microsoft.SecurityInsights/alertRules/614f16f9-e9e3-40b4-ae14-d94eed9cdd2c",
+      "playbookName": ""
+    }
+  ]
+}

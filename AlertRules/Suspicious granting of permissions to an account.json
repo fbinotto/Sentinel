@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let starttime = 14d;\nlet endtime = 1d;\n// The number of operations below which an IP address is considered an unusual source of role assignment operations\nlet alertOperationThreshold = 5;\nlet createRoleAssignmentActivity = AzureActivity\n| where OperationName == \"Create role assignment\";\ncreateRoleAssignmentActivity \n| where TimeGenerated between (ago(starttime) .. ago(endtime))\n| summarize count() by CallerIpAddress, Caller\n| where count_ >= alertOperationThreshold\n| join kind = rightanti ( \ncreateRoleAssignmentActivity\n| where TimeGenerated > ago(endtime)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), ActivityTimeStamp = makelist(TimeGenerated), ActivityStatus = makelist(ActivityStatus), \nOperationIds = makelist(OperationId), CorrelationId = makelist(CorrelationId), ActivityCountByCallerIPAddress = count()  \nby ResourceId, CallerIpAddress, Caller, OperationName, Resource, ResourceGroup\n) on CallerIpAddress, Caller\n| extend timestamp = StartTimeUtc, AccountCustomEntity = Caller, IPCustomEntity = CallerIpAddress",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P14D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Suspicious granting of permissions to an account",
+      "enabled": true,
+      "description": "Identifies IPs from which users grant access to other users on azure resources and alerts when a previously unseen source IP address is used.",
+      "tactics": [
+        "Persistence",
+        "PrivilegeEscalation"
+      ],
+      "alertRuleTemplateName": "b2c15736-b9eb-4dae-8b02-3016b6a45a32",
+      "name": "affd8b6c-84e4-4889-9c43-e6bd557b151d",
+      "playbookName": ""
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Low",
+      "query": "let timeRange = 1d;\nSigninLogs\n| where TimeGenerated >= ago(timeRange)\n| extend OS = DeviceDetail.operatingSystem, Browser = DeviceDetail.browser\n| extend StatusCode = tostring(Status.errorCode), StatusDetails = tostring(Status.additionalDetails)\n| where AppDisplayName contains \"Azure Portal\"\n// Exclude non-failure types\n| where ResultType !in (\"0\", \"50125\", \"50140\")\n// Removing unresolved identities that don't provide status\n| where isnotempty(StatusDetails) and isnotempty(Location) and not(Identity matches regex \"[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}\")\n| extend Status = strcat(StatusCode, \": \", ResultDescription) \n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), Status = makelist(Status), StatusDetails = makelist(StatusDetails), IPAddresses = makelist(IPAddress), IPAddressCount = dcount(IPAddress)\nby UserPrincipalName, AppDisplayName, tostring(Browser), tostring(OS), Location, CorrelationId  \n| mvexpand IPAddresses, Status, StatusDetails\n| extend Status = strcat(Status, \"-\", StatusDetails)\n| summarize Status = makeset(Status) by StartTimeUtc, EndTimeUtc, tostring(IPAddresses), UserPrincipalName, AppDisplayName, tostring(Browser), tostring(OS), Location, IPAddressCount, CorrelationId\n| where Status !has \"MFA requirement satisfied by claim in the token\"\n| summarize Status = makeset(Status), IPAddresses = makeset(IPAddresses), CorrelationIds = makeset(CorrelationId) by StartTimeUtc, EndTimeUtc, UserPrincipalName, AppDisplayName, tostring(Browser), tostring(OS), Location, IPAddressCount\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserPrincipalName, IPCustomEntity = tostring(IPAddresses)",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Failed login attempts to Azure Portal",
+      "enabled": true,
+      "description": "Identifies failed login attempts in the Azure Active Directory SigninLogs to the Azure Portal.  Multiple failed logon \nattempts could indicate a potential brute force attack.  We exclude the following success and non-failure results:\nReferences: https://docs.microsoft.com/en-us/azure/active-directory/reports-monitoring/reference-sign-ins-error-codes\n0 - successful logon\n50125 - Sign-in was interrupted due to a password reset or password registration entry.\n50140 - This error occurred due to 'Keep me signed in' interrupt when the user was signing-in.",
+      "tactics": [
+        "CredentialAccess"
+      ],
+      "alertRuleTemplateName": "223db5c1-1bf8-47d8-8806-bed401b356a4",
+      "lastModifiedUtc": "2020-05-28T10:03:08.0501248Z",
+      "name": "cf1c4a1d-8338-4f7b-a08d-63c71e1e1acb",
+      "playbookName": ""
+    }
+  ]
+}

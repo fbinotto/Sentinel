@@ -1,0 +1,38 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let timeframe = 1d;\nOfficeActivity\n| where TimeGenerated >= ago(timeframe)\n| where RecordType =~ \"ExchangeAdmin\"\n| where UserType in~ (\"Admin\",\"DcAdmin\") \n// Only admin or global-admin can disable/remove policy\n| where Operation startswith \"Remove-\" or Operation startswith \"Disable-\"\n| where Operation has_any (\"AntiPhish\", \"SafeAttachment\", \"SafeLinks\", \"Dlp\", \"Audit\")\n| extend ClientIPOnly = case( \nClientIP has \".\", tostring(split(ClientIP,\":\")[0]), \nClientIP has \"[\", tostring(trim_start(@'[[]',tostring(split(ClientIP,\"]\")[0]))),\nClientIP\n)  \n| extend Port = case(\nClientIP has \".\", (split(ClientIP,\":\")[1]),\nClientIP has \"[\", tostring(split(ClientIP,\"]:\")[1]),\nClientIP\n)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), OperationCount = count() by Operation, UserType, UserId, ClientIP = ClientIPOnly, Port, ResultStatus, Parameters\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserId, IPCustomEntity = ClientIP",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Office policy tampering",
+      "enabled": true,
+      "description": "Identifies if any tampering is done to either auditlog, ATP Safelink, SafeAttachment, AntiPhish or Dlp policy. \nAn adversary may use this technique to evade detection or avoid other policy based defenses.\nReferences: https://docs.microsoft.com/en-us/powershell/module/exchange/advanced-threat-protection/remove-antiphishrule?view=exchange-ps.",
+      "tactics": [
+        "Persistence",
+        "DefenseEvasion"
+      ],
+      "alertRuleTemplateName": "fbd72eb8-087e-466b-bd54-1ca6ea08c6d3",
+      "lastModifiedUtc": "2020-05-25T07:00:07.2476869Z",
+      "name": "c4a4e845-e09e-4a2e-a5bf-5a4ecc7362ad",
+      "playbookName": ""
+    }
+  ]
+}

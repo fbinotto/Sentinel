@@ -1,0 +1,40 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let timeframe = 1d;\r\n let Keywords = dynamic([\"helpdesk\", \" alert\", \" suspicious\", \"fake\", \"malicious\", \"phishing\", \"spam\", \"do not click\", \"do not open\", \"hijacked\", \"Fatal\"]);\r\n OfficeActivity\r\n | where TimeGenerated >= ago(timeframe)\r\n | where Operation =~ \"New-InboxRule\"\r\n | where Parameters has \"Deleted Items\" or Parameters has \"Junk Email\" \r\n | extend Events=todynamic(Parameters)\r\n | parse Events  with * \"SubjectContainsWords\" SubjectContainsWords '}'*\r\n | parse Events  with * \"BodyContainsWords\" BodyContainsWords '}'*\r\n | parse Events  with * \"SubjectOrBodyContainsWords\" SubjectOrBodyContainsWords '}'*\r\n | where SubjectContainsWords has_any (Keywords)\r\n  or BodyContainsWords has_any (Keywords)\r\n  or SubjectOrBodyContainsWords has_any (Keywords)\r\n | extend ClientIPAddress = case( ClientIP has \".\", tostring(split(ClientIP,\":\")[0]), ClientIP has \"[\", tostring(trim_start(@'[[]',tostring(split(ClientIP,\"]\")[0]))), ClientIP )\r\n | extend Keyword = iff(isnotempty(SubjectContainsWords), SubjectContainsWords, (iff(isnotempty(BodyContainsWords),BodyContainsWords,SubjectOrBodyContainsWords )))\r\n | extend RuleDetail = case(OfficeObjectId contains '/' , tostring(split(OfficeObjectId, '/')[-1]) , tostring(split(OfficeObjectId, '\\\\')[-1]))\r\n | summarize count(), StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated) by  Operation, UserId, ClientIPAddress, ResultStatus, Keyword, OriginatingServer, OfficeObjectId, RuleDetail\r\n | extend timestamp = StartTimeUtc,  IPCustomEntity = ClientIPAddress, AccountCustomEntity = UserId , HostCustomEntity =  OriginatingServer",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Malicious Inbox Rule",
+      "enabled": true,
+      "description": "'Often times after the initial compromise the attackers create inbox rules to delete emails that contain certain keywords. This is done so as to limit ability to warn compromised users that they've been compromised. Below is a sample query that tries to detect this.",
+      "tactics": [
+        "Persistence",
+        "DefenseEvasion"
+      ],
+      "alertRuleTemplateName": null,
+      "lastModifiedUtc": "2020-05-29T00:00:00.6192231Z",
+      "name": "6d41802a-da6f-4504-a2b0-0476258a3539",
+      "etag": "\"00009d04-0000-1a00-0000-5ed050820000\"",
+      "id": "/subscriptions/fb99f5a1-54fe-4dcf-8510-13689cc0f9ef/resourceGroups/sentinel/providers/Microsoft.OperationalInsights/workspaces/az-sentinel-001/providers/Microsoft.SecurityInsights/alertRules/6d41802a-da6f-4504-a2b0-0476258a3539",
+      "playbookName": ""
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "analytics": [
+    {
+      "severity": "Low",
+      "query": "let timeframe = 1d;\nOfficeActivity\n| where TimeGenerated >= ago(timeframe)\n| where Operation in~ ( \"Add-MailboxPermission\", \"Add-MailboxFolderPermission\", \"Set-Mailbox\", \"New-ManagementRoleAssignment\")\nand not(UserId has_any ('NT AUTHORITY\\\\SYSTEM (Microsoft.Exchange.ServiceHost)','devilfish-applicationaccount') and Operation in~ ( \"Add-MailboxPermission\", \"Set-Mailbox\"))\n| extend timestamp = TimeGenerated, AccountCustomEntity = UserId, IPCustomIdentity = ClientIP",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Rare and potentially high-risk Office operations",
+      "enabled": true,
+      "description": "Identifies Office operations that are typically rare and can provide capabilities useful to attackers.",
+      "tactics": [
+        "Persistence",
+        "Collection"
+      ],
+      "alertRuleTemplateName": "957cb240-f45d-4491-9ba5-93430a3c08be",
+      "lastModifiedUtc": "2020-05-28T09:57:23.9482952Z",
+      "name": "d4c14b29-642d-4959-babd-a92f94f2149b",
+      "playbookName": ""
+    }
+  ]
+}

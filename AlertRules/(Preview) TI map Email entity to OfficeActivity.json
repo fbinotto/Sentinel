@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let dt_lookBack = 1h;\nlet ioc_lookBack = 14d;\nlet emailregex = @'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$';\nThreatIntelligenceIndicator\n| where TimeGenerated >= ago(ioc_lookBack) and ExpirationDateTime > now()\n| where Active == true\n//Filtering the table for Email related IOCs\n| where isnotempty(EmailRecipient)\n| join (   \n    OfficeActivity | where TimeGenerated >= ago(dt_lookBack) and isnotempty(UserId)\n    | where UserId matches regex emailregex\n    | extend OfficeActivity_TimeGenerated = TimeGenerated\n)\non $left.EmailRecipient == $right.UserId\n| summarize LatestIndicatorTime = arg_max(TimeGenerated, *) by IndicatorId\n| project LatestIndicatorTime, Description, ActivityGroupNames, IndicatorId, ThreatType, Url, ExpirationDateTime, ConfidenceScore, OfficeActivity_TimeGenerated, \nEmailSenderName, EmailSourceDomain, EmailSourceIpAddress, EmailSubject, FileHashValue, FileHashType, UserId, ClientIP, Operation, UserType, RecordType, OfficeWorkload, Parameters\n| extend timestamp = OfficeActivity_TimeGenerated, AccountCustomEntity = UserId, IPCustomEntity = ClientIP, URLCustomEntity = Url",
+      "queryFrequency": "PT1H",
+      "queryPeriod": "P14D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "(Preview) TI map Email entity to OfficeActivity",
+      "enabled": true,
+      "description": "Identifies a match in OfficeActivity table from any Email IOC from TI",
+      "tactics": [
+        "Impact"
+      ],
+      "alertRuleTemplateName": "4a3f5ed7-8da5-4ce2-af6f-c9ada45060f2",
+      "lastModifiedUtc": "2020-05-28T09:55:19.6074646Z",
+      "name": "56c4e87c-c031-414b-b6ca-8b14c1cde8d8",
+      "playbookName": ""
+    }
+  ]
+}

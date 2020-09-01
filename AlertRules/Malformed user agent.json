@@ -1,0 +1,39 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let endtime = 1d;\n(union isfuzzy=true\n(OfficeActivity | where TimeGenerated >= ago(endtime) | where UserAgent != \"\"),\n(OfficeActivity\n| where TimeGenerated >= ago(endtime)\n| where RecordType in (\"AzureActiveDirectoryAccountLogon\", \"AzureActiveDirectoryStsLogon\")\n| extend OperationName = Operation, UserAgent = extractjson(\"$[0].Value\", ExtendedProperties, typeof(string))),\n(AzureDiagnostics\n| where TimeGenerated >= ago(endtime)\n| where ResourceType =~ \"APPLICATIONGATEWAYS\" \n| where OperationName =~ \"ApplicationGatewayAccess\" \n| extend ClientIP = columnifexists(\"clientIP_s\", \"None\"), UserAgent = columnifexists(\"userAgent_s\", \"None\")))\n// Likely artefact of hardcoding\n| where UserAgent startswith \"User\" or UserAgent startswith \"\\\"\"\n// Incorrect casing\nor (UserAgent startswith \"Mozilla\" and not(UserAgent containscs \"Mozilla\"))\n// Incorrect casing\nor UserAgent containscs  \"(Compatible;\"\n// Missing MSIE version\nor UserAgent matches regex @\"MSIE\\s?;\"\n// Incorrect spacing around MSIE version\nor UserAgent matches regex  @\"MSIE(?:\\d|.{1,5}?\\d\\s;)\"\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), OperationNames = makeset(OperationName), UserAgentCount = dcount(UserAgent), \nUserAgentList = makeset(UserAgent), RecordTypes = makeset(RecordType) by UserId, ClientIP\n| extend timestamp = StartTimeUtc, IPCustomEntity = ClientIP, AccountCustomEntity = UserId",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Malformed user agent",
+      "enabled": true,
+      "description": "Malware authors will sometimes hardcode user agent string values when writing the network communication component of their malware.\nMalformed user agents can be an indication of such malware.",
+      "tactics": [
+        "InitialAccess",
+        "CommandAndControl",
+        "Execution"
+      ],
+      "alertRuleTemplateName": "a357535e-f722-4afe-b375-cff362b2b376",
+      "lastModifiedUtc": "2020-05-28T09:56:33.4010978Z",
+      "name": "cfd527fe-a112-4e37-b591-30dc31c1a6b5",
+      "playbookName": ""
+    }
+  ]
+}

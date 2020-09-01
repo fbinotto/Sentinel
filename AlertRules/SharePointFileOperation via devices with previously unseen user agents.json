@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let threshold = 5;\nlet szSharePointFileOperation = \"SharePointFileOperation\";\nlet szOperations = dynamic([\"FileDownloaded\", \"FileUploaded\"]);\nlet starttime = 14d;\nlet endtime = 1d;\nlet historicalActivity =\nOfficeActivity\n| where TimeGenerated between(ago(starttime)..ago(endtime))\n| where RecordType =~ szSharePointFileOperation\n| where Operation in~ (szOperations)\n| where isnotempty(UserAgent)\n| summarize historicalCount = count() by UserAgent, RecordType, Operation;\nlet recentActivity = OfficeActivity\n| where RecordType =~ szSharePointFileOperation\n| where Operation in~ (szOperations)\n| where TimeGenerated > ago(endtime)\n| where isnotempty(UserAgent)\n| summarize min(Start_Time), max(Start_Time), recentCount = count() by UserAgent, RecordType, Operation;\nlet RareUserAgent = recentActivity | join kind = leftanti (historicalActivity) on UserAgent\n| order by recentCount desc, UserAgent\n// More than 3 downloads/uploads from a new user agent today\n| where recentCount > threshold;\nOfficeActivity \n| where TimeGenerated > ago(endtime) \n| where RecordType =~ szSharePointFileOperation \n| where Operation in~ (szOperations)\n| where isnotempty(UserAgent)\n| join kind= inner (RareUserAgent)\non UserAgent, RecordType, Operation    \n| where Start_Time between(min_Start_Time .. max_Start_Time)\n| summarize StartTimeUtc = min(min_Start_Time), EndTimeUtc = max(max_Start_Time) by RecordType, Operation, UserAgent, UserType, UserId, ClientIP, OfficeWorkload, Site_Url, OfficeObjectId, UserAgentSeenCount = recentCount\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserId, IPCustomEntity = ClientIP, URLCustomEntity = Site_Url\n| order by UserAgentSeenCount desc, UserAgent asc, Operation asc, UserId asc",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P14D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "SharePointFileOperation via devices with previously unseen user agents",
+      "enabled": true,
+      "description": "Identifies if the number of documents uploaded or downloaded from device(s) associated\nwith a previously unseen user agent exceeds a threshold (default is 5).",
+      "tactics": [
+        "Exfiltration"
+      ],
+      "alertRuleTemplateName": "5dd76a87-9f87-4576-bab3-268b0e2b338b",
+      "lastModifiedUtc": "2020-05-28T09:55:53.3232129Z",
+      "name": "1f465a42-0dd6-4ff6-ae3c-68fd7146c01c",
+      "playbookName": ""
+    }
+  ]
+}

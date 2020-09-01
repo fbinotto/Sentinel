@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let timeframe = 1d;\nOfficeActivity\n| where TimeGenerated >= ago(timeframe)\n| where UserType in~ (\"Admin\",\"DcAdmin\") \n// Only admin or global-admin can disable audit logging\n| where Operation =~ \"Set-AdminAuditLogConfig\" \n| extend AdminAuditLogEnabledValue = tostring(parse_json(tostring(parse_json(tostring(array_slice(parse_json(Parameters),3,3)))[0])).Value)\n| where AdminAuditLogEnabledValue =~ \"False\" \n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), OperationCount = count() by Operation, UserType, UserId, ClientIP, ResultStatus, Parameters, AdminAuditLogEnabledValue\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserId, IPCustomEntity = ClientIP",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Exchange AuditLog disabled",
+      "enabled": true,
+      "description": "Identifies when the exchange audit logging has been disabled which may be an adversary attempt\nto evade detection or avoid other defenses.",
+      "tactics": [
+        "DefenseEvasion"
+      ],
+      "alertRuleTemplateName": "194dd92e-d6e7-4249-85a5-273350a7f5ce",
+      "lastModifiedUtc": "2020-05-28T09:57:02.1358579Z",
+      "name": "c7b25513-1c64-4d4f-8388-9d96910e3d67",
+      "playbookName": ""
+    }
+  ]
+}

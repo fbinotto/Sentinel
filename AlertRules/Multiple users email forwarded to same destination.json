@@ -1,0 +1,38 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let timeframe = 7d;\nOfficeActivity\n| where TimeGenerated >= ago(timeframe)\n| where Operation =~ \"Set-Mailbox\"\n| where Parameters contains \"ForwardingSmtpAddress\"\n| extend parsed = parse_json(Parameters)\n| extend parameterName = parsed[1].Name, fwdingDestination = tostring(parsed[1].Value)\n| where isnotempty(fwdingDestination)\n| extend ClientIPOnly = case( \nClientIP has \".\", tostring(split(ClientIP,\":\")[0]), \nClientIP has \"[\", tostring(trim_start(@'[[]',tostring(split(ClientIP,\"]\")[0]))),\nClientIP\n)  \n| extend Port = case(\nClientIP has \".\", (split(ClientIP,\":\")[1]),\nClientIP has \"[\", tostring(split(ClientIP,\"]:\")[1]),\nClientIP\n)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated), DistinctUserCount = dcount(UserId), UserId = makeset(UserId), \nPorts = makeset(Port), EventCount = count() by fwdingDestination, ClientIP = ClientIPOnly \n| where DistinctUserCount > 1\n| mvexpand UserId\n| extend UserId = tostring(UserId), Ports = tostring(Ports)\n| distinct StartTimeUtc, EndTimeUtc, UserId, DistinctUserCount, ClientIP, Ports, fwdingDestination, EventCount\n| extend timestamp = StartTimeUtc, AccountCustomEntity = UserId, IPCustomEntity = ClientIP",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P7D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "Multiple users email forwarded to same destination",
+      "enabled": true,
+      "description": "Identifies when multiple (more than one) users mailboxes are configured to forward to the same destination. \nThis could be an attacker-controlled destination mailbox configured to collect mail from multiple compromised user accounts.",
+      "tactics": [
+        "Collection",
+        "Exfiltration"
+      ],
+      "alertRuleTemplateName": "871ba14c-88ef-48aa-ad38-810f26760ca3",
+      "lastModifiedUtc": "2020-05-28T09:58:26.0978676Z",
+      "name": "491d5d41-e0ea-457f-9822-2ec052ab2ae2",
+      "playbookName": ""
+    }
+  ]
+}

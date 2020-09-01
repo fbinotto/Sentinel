@@ -1,0 +1,37 @@
+{
+  "analytics": [
+    {
+      "severity": "Medium",
+      "query": "let timeframe = 1d;\n(union isfuzzy=true\n(AuditLogs \n| where TimeGenerated >= ago(timeframe) \n| where OperationName =~ \"Disable Strong Authentication\"\n| extend IPAddress = tostring(parse_json(tostring(InitiatedBy.user)).ipAddress) \n| extend InitiatedByUser = iff(isnotempty(tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)), \n tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName), tostring(parse_json(tostring(InitiatedBy.app)).displayName))\n| extend Targetprop = todynamic(TargetResources)\n| extend TargetUser = tostring(Targetprop[0].userPrincipalName) \n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated) by User = TargetUser, InitiatedByUser , Operation = OperationName , CorrelationId, IPAddress, Category, Source = SourceSystem , AADTenantId, Type\n),\n(AWSCloudTrail\n| where TimeGenerated >= ago(timeframe)\n| where EventName in~ (\"DeactivateMFADevice\", \"DeleteVirtualMFADevice\") \n| extend InstanceProfileName = tostring(parse_json(RequestParameters).InstanceProfileName)\n| extend TargetUser = tostring(parse_json(RequestParameters).userName)\n| summarize StartTimeUtc = min(TimeGenerated), EndTimeUtc = max(TimeGenerated) by User = TargetUser, Source = EventSource , Operation = EventName , TenantorInstance_Detail = InstanceProfileName, IPAddress = SourceIpAddress\n)\n)\n| extend timestamp = StartTimeUtc, AccountCustomEntity = User, IPCustomEntity = IPAddress",
+      "queryFrequency": "P1D",
+      "queryPeriod": "P1D",
+      "triggerOperator": "GreaterThan",
+      "triggerThreshold": 0,
+      "suppressionDuration": "PT5H",
+      "suppressionEnabled": false,
+      "incidentConfiguration": {
+        "createIncident": true,
+        "groupingConfiguration": {
+          "enabled": true,
+          "reopenClosedIncident": false,
+          "lookbackDuration": "PT5H",
+          "entitiesMatchingMethod": "All",
+          "groupByEntities": ""
+        }
+      },
+      "queryResultsAggregationSettings": {
+        "aggregationKind": "SingleAlert"
+      },
+      "displayName": "MFA disabled for a user",
+      "enabled": true,
+      "description": "Multi-Factor Authentication (MFA) helps prevent credential compromise. This alert identifies when an attempt has been made to diable MFA for a user ",
+      "tactics": [
+        "CredentialAccess"
+      ],
+      "alertRuleTemplateName": "65c78944-930b-4cae-bd79-c3664ae30ba7",
+      "lastModifiedUtc": "2020-05-28T10:02:02.9561517Z",
+      "name": "0960bd8f-9351-4fab-b2fe-a017984b50b3",
+      "playbookName": ""
+    }
+  ]
+}

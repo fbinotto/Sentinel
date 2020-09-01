@@ -1,0 +1,36 @@
+{
+  "analytics": [
+{
+  "severity": "Medium",
+  "query": "let lookBack_long = 14d;\nlet lookBack_med = 7d;\nlet lookBack = 1d;\nSigninLogs\n| where TimeGenerated >= startofday(ago(lookBack_long))\n| extend locationString = strcat(tostring(LocationDetails[\"countryOrRegion\"]), \"/\", tostring(LocationDetails[\"state\"]), \"/\", tostring(LocationDetails[\"city\"]), \";\") \n| project TimeGenerated, AppDisplayName , UserPrincipalName, locationString \n// Create time series \n| make-series dLocationCount = dcount(locationString) on TimeGenerated in range(startofday(ago(lookBack_long)),now(), 1d) \nby UserPrincipalName, AppDisplayName \n// Compute best fit line for each entry \n| extend (RSquare,Slope,Variance,RVariance,Interception,LineFit)=series_fit_line(dLocationCount) \n// Chart the 3 most interesting lines  \n// A 0-value slope corresponds to an account being completely stable over time for a given Azure Active Directory application\n| where Slope > 0.3\n| top 50 by Slope desc\n| join kind = leftsemi (\nSigninLogs\n| where TimeGenerated >= startofday(ago(lookBack_med))\n| extend locationString = strcat(tostring(LocationDetails[\"countryOrRegion\"]), \"/\", tostring(LocationDetails[\"state\"]), \"/\", tostring(LocationDetails[\"city\"]), \";\") \n| project TimeGenerated, AppDisplayName , UserPrincipalName, locationString \n| make-series dLocationCount = dcount(locationString) on TimeGenerated in range(startofday(ago(lookBack_med)) ,now(), 1d) \nby UserPrincipalName, AppDisplayName \n| extend (RSquare,Slope,Variance,RVariance,Interception,LineFit)=series_fit_line(dLocationCount) \n| top 50 by Slope desc\n| where Slope > 0.3\n) on UserPrincipalName, AppDisplayName\n| join kind = leftsemi (\nSigninLogs\n| where TimeGenerated >= startofday(ago(lookBack))\n| extend locationString = strcat(tostring(LocationDetails[\"countryOrRegion\"]), \"/\", tostring(LocationDetails[\"state\"]), \"/\", tostring(LocationDetails[\"city\"]), \";\") \n| project TimeGenerated, AppDisplayName , UserPrincipalName, locationString \n| make-series dLocationCount = dcount(locationString) on TimeGenerated in range(startofday(ago(lookBack)) ,now(), 1d) \nby UserPrincipalName, AppDisplayName \n| extend (RSquare,Slope,Variance,RVariance,Interception,LineFit)=series_fit_line(dLocationCount) \n| top 50 by Slope desc\n// Higher threshold requirement on last day anomaly\n| where Slope > 5\n) on UserPrincipalName, AppDisplayName\n| extend timestamp = TimeGenerated, AccountCustomEntity = UserPrincipalName",
+  "queryFrequency": "P1D",
+  "queryPeriod": "P14D",
+  "triggerOperator": "GreaterThan",
+  "triggerThreshold": 0,
+  "suppressionDuration": "PT5H",
+  "suppressionEnabled": false,
+  "incidentConfiguration": {
+    "createIncident": true,
+    "groupingConfiguration": {
+      "enabled": true,
+      "reopenClosedIncident": false,
+      "lookbackDuration": "PT5H",
+      "entitiesMatchingMethod": "All",
+      "groupByEntities": ""
+    }
+  },
+  "queryResultsAggregationSettings": {
+    "aggregationKind": "SingleAlert"
+  },
+  "displayName": "Anomalous sign-in location by user account and authenticating application",
+  "enabled": true,
+  "description": "This query over Azure Active Directory sign-in considers all user sign-ins for each Azure Active \nDirectory application and picks out the most anomalous change in location profile for a user within an \nindividual application. An alert is generated for recent sign-ins that have location counts that are anomalous\nover last day but also over the last 7-day and 14-day periods.",
+  "tactics": [
+    "InitialAccess"
+  ],
+  "alertRuleTemplateName": "7cb8f77d-c52f-4e46-b82f-3cf2e106224a",
+  "lastModifiedUtc": "2020-05-28T09:59:12.8230277Z",
+  "name": "cd561674-dcc0-4e9f-9211-43fdc09d5081",
+  "playbookName": ""
+}
+]}
